@@ -131,11 +131,11 @@
       let trainMarkers = [];
       let selectedTrain = null;
 
-      function createTrainIcon(trainNumber, isSelected = false) {
+      function createTrainIcon(id, isSelected = false) {
         const color = isSelected ? "#dc3545" : "#007bff";
         const size = isSelected ? 35 : 25;
 
-        const content = isSelected ? "🚂" : trainNumber;
+        const content = isSelected ? "🚢" : id;
 
         return L.divIcon({
           className: "train-marker",
@@ -161,24 +161,31 @@
         });
       }
 
-      function updateSelectedTrainInfo(train) {
-        const coords = train.location.coordinates;
+      function updateSelectedTrainInfo(feature) {
+        const coords = feature.geometry.coordinates;
         const lat = coords[1];
         const lng = coords[0];
 
+        const ship = feature.properties;
+        const mmsi = ship.mmsi;
+        const sog = ship.sog || 0;
+        const speedKmh = sog * 1.852;
+        const timeString = ship.timestamp || ship.posTime;
+        const timestamp = timeString ? new Date(timeString) : null;
+
         document.getElementById(
           "trainNumber"
-        ).textContent = `Laiva ${train.trainNumber}`;
-        document.getElementById("speed").textContent = train.speed + " km/h";
+        ).textContent = `Laiva MMSI ${mmsi}`;
+        document.getElementById("speed").textContent =
+          speedKmh.toFixed(1) + " km/h";
         document.getElementById("coordinates").textContent = `${lat.toFixed(
           6
         )}, ${lng.toFixed(6)}`;
+        document.getElementById("timestamp").textContent = timestamp
+          ? timestamp.toLocaleString("fi-FI")
+          : "-";
 
-        const timestamp = new Date(train.timestamp);
-        document.getElementById("timestamp").textContent =
-          timestamp.toLocaleString("fi-FI");
-
-        updateSpeedColor(train.speed);
+        updateSpeedColor(speedKmh);
       }
 
       function displayAllTrains(trains) {
@@ -189,50 +196,65 @@
         trainMarkers.forEach((marker) => map.removeLayer(marker));
         trainMarkers = [];
 
-        trains.forEach((train) => {
-          const coords = train.location.coordinates;
+        trains.forEach((feature) => {
+          const coords = feature.geometry.coordinates;
           const lat = coords[1];
           const lng = coords[0];
 
+          const ship = feature.properties;
+          const mmsi = ship.mmsi;
+          const sog = ship.sog || 0;
+          const speedKmh = sog * 1.852;
+          const timeString = ship.timestamp || ship.posTime;
+          const timestamp = timeString ? new Date(timeString) : null;
+
           const marker = L.marker([lat, lng], {
-            icon: createTrainIcon(train.trainNumber, false),
+            icon: createTrainIcon(mmsi, false),
           }).addTo(map);
 
-          const timestamp = new Date(train.timestamp);
           marker.bindPopup(`
-            <strong>Laiva ${train.trainNumber}</strong><br>
-            Nopeus: ${train.speed} km/h<br>
-            Tarkkuus: ${train.accuracy} m<br>
-            Päivitetty: ${timestamp.toLocaleTimeString("fi-FI")}
+            <strong>Laiva MMSI ${mmsi}</strong><br>
+            Nopeus: ${speedKmh.toFixed(1)} km/h<br>
+            Päivitetty: ${
+              timestamp ? timestamp.toLocaleTimeString("fi-FI") : "-"
+            }
           `);
 
           marker.on("click", function () {
-            selectTrain(train);
+            selectTrain(feature);
           });
 
           trainMarkers.push(marker);
         });
       }
 
-      function selectTrain(train) {
-        selectedTrain = train;
-        const coords = train.location.coordinates;
+      function selectTrain(feature) {
+        selectedTrain = feature;
+
+        const coords = feature.geometry.coordinates;
         const lat = coords[1];
         const lng = coords[0];
+
+        const ship = feature.properties;
+        const mmsi = ship.mmsi;
+        const sog = ship.sog || 0;
+        const speedKmh = sog * 1.852;
+        const timeString = ship.timestamp || ship.posTime;
+        const timestamp = timeString ? new Date(timeString) : null;
 
         trainMarkers.forEach((marker) => map.removeLayer(marker));
         trainMarkers = [];
 
         const marker = L.marker([lat, lng], {
-          icon: createTrainIcon(train.trainNumber, true),
+          icon: createTrainIcon("🚢", true),
         }).addTo(map);
 
-        const timestamp = new Date(train.timestamp);
         marker.bindPopup(`
-          <strong>Laiva ${train.trainNumber}</strong><br>
-          Nopeus: ${train.speed} km/h<br>
-          Tarkkuus: ${train.accuracy} m<br>
-          Päivitetty: ${timestamp.toLocaleTimeString("fi-FI")}
+          <strong>Laiva MMSI ${mmsi}</strong><br>
+          Nopeus: ${speedKmh.toFixed(1)} km/h<br>
+          Päivitetty: ${
+            timestamp ? timestamp.toLocaleTimeString("fi-FI") : "-"
+          }
         `);
 
         trainMarkers.push(marker);
@@ -242,7 +264,7 @@
           map.setView([lat, lng], 13);
         }, 50);
 
-        updateSelectedTrainInfo(train);
+        updateSelectedTrainInfo(feature);
       }
 
       function showAllTrains() {
@@ -283,20 +305,20 @@
       function updateSpeedColor(speed) {
         const speedElement = document.getElementById("speed");
         if (speed < 20) {
-          speedElement.style.color = "#dc3545"; 
+          speedElement.style.color = "#dc3545";
         } else if (speed < 80) {
-          speedElement.style.color = "#ffc107"; 
+          speedElement.style.color = "#ffc107";
         } else {
-          speedElement.style.color = "#28a745"; 
+          speedElement.style.color = "#28a745";
         }
       }
 
       fetchAllTrains().then((trains) => {
         if (trains.length > 0) {
           displayAllTrains(trains);
-          console.log(`Ladattu ${trains.length} junaa kartalle`);
+          console.log(`Ladattu ${trains.length} laivaa kartalle`);
         } else {
-          console.warn("Ei junia saatavilla.");
+          console.warn("Ei laivoja saatavilla.");
         }
       });
 
