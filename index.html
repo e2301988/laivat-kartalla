@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Junien reaaliaikainen sijainti</title>
+    <title>Laivojen reaaliaikainen sijainti</title>
 
     <!-- Leaflet CSS -->
     <link
@@ -79,14 +79,14 @@
     </style>
   </head>
   <body>
-    <h1>Junien reaaliaikainen sijainti</h1>
+    <h1>Laivojen reaaliaikainen sijainti</h1>
 
     <div class="info-panel">
       <div class="train-info">
         <div class="info-item">
-          <div class="info-label">Valittu juna:</div>
+          <div class="info-label">Valittu laiva:</div>
           <div class="info-value train-number" id="trainNumber">
-            Kaikki junat
+            Kaikki laivat
           </div>
         </div>
         <div class="info-item">
@@ -123,7 +123,7 @@
           cursor: pointer;
         "
       >
-        Näytä kaikki junat
+        Näytä kaikki laivat
       </button>
     </div>
 
@@ -178,7 +178,7 @@
         });
       }
 
-      // Päivitä yksittäisen junan tiedot
+      // Päivitä yksittäisen junan (nyt laivan) tiedot
       function updateSelectedTrainInfo(train) {
         const coords = train.location.coordinates;
         const lat = coords[1];
@@ -186,7 +186,7 @@
 
         document.getElementById(
           "trainNumber"
-        ).textContent = `Juna ${train.trainNumber}`;
+        ).textContent = `Laiva ${train.trainNumber}`;
         document.getElementById("speed").textContent = train.speed + " km/h";
         document.getElementById("coordinates").textContent = `${lat.toFixed(
           6
@@ -199,13 +199,13 @@
         updateSpeedColor(train.speed);
       }
 
-      // Näytä kaikki junat kartalla
+      // Näytä kaikki junat (nyt laivat) kartalla
       function displayAllTrains(trains) {
         // TEHTÄVÄ 1: LISÄÄ TÄHÄN console.log(trains) NÄHDÄKSESI DATAN RAKENTEEN
         // Avaa Developer Tools (F12) ja katso Console-välilehteä
         // Tutki mitä tietoja yksittäisestä junasta löytyy
 
-        // Jos juna on valittu, älä päivitä markereitä
+        // Jos juna on valittu, älä päivitä markereita
         if (selectedTrain) return;
 
         // Poista vanhat markerit
@@ -226,7 +226,7 @@
 
           const timestamp = new Date(train.timestamp);
           marker.bindPopup(`
-            <strong>Juna ${train.trainNumber}</strong><br>
+            <strong>Laiva ${train.trainNumber}</strong><br>
             Nopeus: ${train.speed} km/h<br>
             Tarkkuus: ${train.accuracy} m<br>
             Päivitetty: ${timestamp.toLocaleTimeString("fi-FI")}
@@ -241,7 +241,7 @@
         });
       }
 
-      // Valitse tietty juna
+      // Valitse tietty juna (nyt laiva)
       function selectTrain(train) {
         selectedTrain = train;
         const coords = train.location.coordinates;
@@ -259,7 +259,7 @@
 
         const timestamp = new Date(train.timestamp);
         marker.bindPopup(`
-          <strong>Juna ${train.trainNumber}</strong><br>
+          <strong>Laiva ${train.trainNumber}</strong><br>
           Nopeus: ${train.speed} km/h<br>
           Tarkkuus: ${train.accuracy} m<br>
           Päivitetty: ${timestamp.toLocaleTimeString("fi-FI")}
@@ -267,7 +267,7 @@
 
         trainMarkers.push(marker);
 
-        // Zoomaa valittuun junaan - varmista että kartta on valmis
+        // Zoomaa valittuun junaan (laivaan) - varmista että kartta on valmis
         setTimeout(() => {
           map.invalidateSize(); // Pakota kartta laskemaan koko uudestaan
           map.setView([lat, lng], 13);
@@ -277,10 +277,10 @@
         updateSelectedTrainInfo(train);
       }
 
-      // Näytä kaikki junat (palauta yleiskuva)
+      // Näytä kaikki junat (nyt laivat) – palauta yleiskuva
       function showAllTrains() {
         selectedTrain = null;
-        document.getElementById("trainNumber").textContent = "Kaikki junat";
+        document.getElementById("trainNumber").textContent = "Kaikki laivat";
         document.getElementById("speed").textContent = "-";
         document.getElementById("coordinates").textContent = "-";
         document.getElementById("timestamp").textContent = "-";
@@ -292,7 +292,7 @@
         fetchAllTrains().then(displayAllTrains);
       }
 
-      // Hae kaikki junat API:sta
+      // Hae kaikki junat API:sta (tämä käyttää vielä junarajapintaa)
       function fetchAllTrains() {
         return fetch(
           "https://rata.digitraffic.fi/api/v1/train-locations/latest"
