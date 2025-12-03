@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Laivojen reaaliaikainen sijainti</title>
 
-    <!-- Leaflet CSS -->
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
 
-    <!-- CSS-tyylit -->
     <style>
       body {
         margin: 0;
@@ -101,14 +99,6 @@
           <div class="info-label">Päivitetty:</div>
           <div class="info-value" id="timestamp">-</div>
         </div>
-        <!-- TEHTÄVÄ 3: LISÄÄ TÄHÄN UUSI info-item ELEMENTTI JUNIEN MÄÄRÄLLE -->
-        <!-- Kopioi yllä oleva rakenne ja anna id="trainCount" -->
-        <!-- Esimerkki:
-        <div class="info-item">
-          <div class="info-label">Junia kartalla:</div>
-          <div class="info-value" id="trainCount">-</div>
-        </div>
-        -->
       </div>
       <button
         id="showAllTrains"
@@ -129,29 +119,22 @@
 
     <div id="map"></div>
 
-    <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-      // Alusta kartta (Suomi keskellä)
       const map = L.map("map").setView([64.5, 26.5], 6);
 
-      // Lisää karttatausta (OpenStreetMap)
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
 
-      // Junien markerit
       let trainMarkers = [];
       let selectedTrain = null;
 
-      // Junan ikoni
       function createTrainIcon(trainNumber, isSelected = false) {
         const color = isSelected ? "#dc3545" : "#007bff";
         const size = isSelected ? 35 : 25;
-        
-        // TEHTÄVÄ 2: VAIHDA TÄMÄ 🚂 EMOJI JOHONKIN TOISEEN
-        // Vaihtoehdot: 🚄, 🚅, 🚊, 🚆, 🚇
+
         const content = isSelected ? "🚂" : trainNumber;
 
         return L.divIcon({
@@ -178,7 +161,6 @@
         });
       }
 
-      // Päivitä yksittäisen junan (nyt laivan) tiedot
       function updateSelectedTrainInfo(train) {
         const coords = train.location.coordinates;
         const lat = coords[1];
@@ -199,21 +181,13 @@
         updateSpeedColor(train.speed);
       }
 
-      // Näytä kaikki junat (nyt laivat) kartalla
       function displayAllTrains(trains) {
-        // TEHTÄVÄ 1: LISÄÄ TÄHÄN console.log(trains) NÄHDÄKSESI DATAN RAKENTEEN
-        // Avaa Developer Tools (F12) ja katso Console-välilehteä
-        // Tutki mitä tietoja yksittäisestä junasta löytyy
+        console.log("Laiva-featuret:", trains);
 
-        // Jos juna on valittu, älä päivitä markereita
         if (selectedTrain) return;
 
-        // Poista vanhat markerit
         trainMarkers.forEach((marker) => map.removeLayer(marker));
         trainMarkers = [];
-
-        // TEHTÄVÄ 3: PÄIVITÄ JUNAMÄÄRÄ TÄHÄN
-        // Käytä: document.getElementById("trainCount").textContent = trains.length + " kpl";
 
         trains.forEach((train) => {
           const coords = train.location.coordinates;
@@ -232,7 +206,6 @@
             Päivitetty: ${timestamp.toLocaleTimeString("fi-FI")}
           `);
 
-          // Klikkaustapahtuma
           marker.on("click", function () {
             selectTrain(train);
           });
@@ -241,18 +214,15 @@
         });
       }
 
-      // Valitse tietty juna (nyt laiva)
       function selectTrain(train) {
         selectedTrain = train;
         const coords = train.location.coordinates;
         const lat = coords[1];
         const lng = coords[0];
 
-        // Poista kaikki markerit
         trainMarkers.forEach((marker) => map.removeLayer(marker));
         trainMarkers = [];
 
-        // Lisää vain valittu juna kartalle
         const marker = L.marker([lat, lng], {
           icon: createTrainIcon(train.trainNumber, true),
         }).addTo(map);
@@ -267,51 +237,60 @@
 
         trainMarkers.push(marker);
 
-        // Zoomaa valittuun junaan (laivaan) - varmista että kartta on valmis
         setTimeout(() => {
-          map.invalidateSize(); // Pakota kartta laskemaan koko uudestaan
+          map.invalidateSize();
           map.setView([lat, lng], 13);
         }, 50);
 
-        // Päivitä info-paneeli
         updateSelectedTrainInfo(train);
       }
 
-      // Näytä kaikki junat (nyt laivat) – palauta yleiskuva
       function showAllTrains() {
         selectedTrain = null;
         document.getElementById("trainNumber").textContent = "Kaikki laivat";
         document.getElementById("speed").textContent = "-";
         document.getElementById("coordinates").textContent = "-";
         document.getElementById("timestamp").textContent = "-";
-        
-        // TEHTÄVÄ 3: NOLLAA JUNAMÄÄRÄ TÄHÄN
-        // Käytä: document.getElementById("trainCount").textContent = "-";
 
         map.setView([64.5, 26.5], 6);
         fetchAllTrains().then(displayAllTrains);
       }
 
-      // Hae kaikki junat API:sta (tämä käyttää vielä junarajapintaa)
       function fetchAllTrains() {
-        return fetch(
-          "https://rata.digitraffic.fi/api/v1/train-locations/latest"
-        ).then((response) => response.json());
+        const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+        const url = `https://meri.digitraffic.fi/api/ais/v1/locations?from=${tenMinutesAgo}`;
+
+        return fetch(url)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Laiva-API-pyyntö epäonnistui");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            const features = data.features || [];
+            const movingShips = features.filter(
+              (feature) => (feature.properties.sog || 0) > 0.5
+            );
+            return movingShips;
+          })
+          .catch((error) => {
+            console.error("Virhe laiva-API-kutsussa:", error);
+            return [];
+          });
       }
 
-      // Nopeusmittari värit
       function updateSpeedColor(speed) {
         const speedElement = document.getElementById("speed");
         if (speed < 20) {
-          speedElement.style.color = "#dc3545"; // Punainen
+          speedElement.style.color = "#dc3545"; 
         } else if (speed < 80) {
-          speedElement.style.color = "#ffc107"; // Keltainen
+          speedElement.style.color = "#ffc107"; 
         } else {
-          speedElement.style.color = "#28a745"; // Vihreä
+          speedElement.style.color = "#28a745"; 
         }
       }
 
-      // Käynnistä sovellus
       fetchAllTrains().then((trains) => {
         if (trains.length > 0) {
           displayAllTrains(trains);
@@ -321,7 +300,6 @@
         }
       });
 
-      // Päivitä junien sijainteja 30 sekunnin välein
       setInterval(() => {
         fetchAllTrains().then(displayAllTrains);
       }, 30000);
